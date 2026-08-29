@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------
 
 """
-    geojoin(geotable₁, geotable₂, var₁ => agg₁, ..., varₙ => aggₙ; kind=:left, pred=intersects, on=nothing)
+    geojoin(geotable₁, geotable₂, var₁ => agg₁, ..., varₙ => aggₙ; kind=:left, pred=intersects, on=nothing, spindex=BVH)
 
 Joins `geotable₁` with `geotable₂` using a certain `kind` of join and predicate function `pred`
 that takes two geometries and returns a boolean (`(g1, g2) -> g1 ⊆ g2`).
@@ -15,6 +15,9 @@ The variable value match use the `isequal` function.
 Whenever two or more matches are encountered, aggregate `varᵢ` with aggregation function `aggᵢ`.
 If no aggregation function is provided for a variable, then the aggregation function will be
 selected according to the scientific types: `mean` for continuous and `first` otherwise.
+
+The spindex keyword specifies the spatial index used for broad-phase pruning when supported by 
+the predicate. It defaults to BVH.
 
 ## Kinds
 
@@ -47,7 +50,8 @@ function _geojoin(
   aggfuns::Vector{Function};
   kind=:left,
   pred=intersects,
-  on=nothing
+  on=nothing,
+  spindex=BVH
 )
   if kind ∉ (:left, :inner)
     throw(ArgumentError("invalid kind of join, use one of :left or :inner"))
@@ -68,6 +72,17 @@ function _geojoin(
   # adjust CRS of the second geotable if necessary
   gtb2 = _adjustcrs(gtb1, gtb2)
 
+  gtb1, gtb2 = _uniquenames(gtb1, gtb2, onvars)
+
+  gtb1 = _adjustunits(gtb1)
+  gtb2 = _adjustunits(gtb2)
+
+  _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred, spindex)
+end
+
+function _uniquenames(gtb1, gtb2, onvars=nothing)
+  vars1 = Tables.schema(values(gtb1)).names
+  vars2 = Tables.schema(values(gtb2)).names
   # make variable names unique
   if !isdisjoint(vars1, vars2)
     # repeated variable names
@@ -83,14 +98,10 @@ function _geojoin(
     end
     gtb2 = _rename(gtb2, vars, newvars)
   end
-
-  gtb1 = _adjustunits(gtb1)
-  gtb2 = _adjustunits(gtb2)
-
-  _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred)
+  gtb1, gtb2
 end
 
-function _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred)
+function _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred, spindex)
   dom1 = domain(gtb1)
   dom2 = domain(gtb2)
   tab1 = values(gtb1)
@@ -107,30 +118,26 @@ function _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred)
   agg = _aggdict(selector, aggfuns, cols2, vars2)
 
   # flag predicates for which overlapping bounding boxes are necessary
-  usebbox = pred ∈ (intersects, issubset, isequal)
-  if usebbox
-    boxes1 = map(boundingbox, dom1)
-    boxes2 = map(boundingbox, dom2)
+  usespindex = pred ∈ (intersects, issubset, isequal)
+  if usespindex
+    index2 = spindex(dom2)
   end
 
   # rows to join
   jrows = _tmap(1:nrow(gtb1)) do i
     geo1 = dom1[i]
     row1 = Tables.subset(tab1, i, viewhint=true)
-    if usebbox
-      box1 = boxes1[i]
-      row2 = Tables.subset(tab2, 1, viewhint=true)
-      matches = typeof(row2)[]
-      for j in 1:nrow(gtb2)
-        box2 = boxes2[j]
-        intersects(box1, box2) || continue
-        row2 = Tables.subset(tab2, j, viewhint=true)
-        onpred(row1, row2) || continue
-        geo2 = dom2[j]
-        pred(geo1, geo2) || continue
-        push!(matches, row2)
-      end
-      matches
+    if usespindex
+    matchinds = Int[]
+    foreachcandidate(geo1, index2) do j
+      row2 = Tables.subset(tab2, j, viewhint=true)
+      onpred(row1, row2) || return
+      geo2 = dom2[j]
+      pred(geo1, geo2) || return
+      push!(matchinds, j)
+    end
+    sort!(matchinds)
+    [Tables.subset(tab2, j, viewhint=true) for j in matchinds]
     else
       rows2 = Tables.rows(tab2)
       [row2 for (geo2, row2) in zip(dom2, rows2) if pred(geo1, geo2) && onpred(row1, row2)]
