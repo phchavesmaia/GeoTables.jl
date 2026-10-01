@@ -23,916 +23,823 @@
     gtb2 = georef((; b=rand(9)), pset)
     gtb3 = georef((; c=1:100), grid)
 
-		# left join
-		jgtb = geojoin(gtb1, gtb2)
-		@test propertynames(jgtb) == [:a, :b, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test jgtb.b[1] == mean(gtb2.b[[1, 2]])
-		@test jgtb.b[2] == mean(gtb2.b[[3, 4]])
-		@test jgtb.b[3] == mean(gtb2.b[[6, 7]])
-		@test jgtb.b[4] == mean(gtb2.b[[8, 9]])
-
-		jgtb = geojoin(gtb1, gtb2, :b => std)
-		@test propertynames(jgtb) == [:a, :b, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test jgtb.b[1] == std(gtb2.b[[1, 2]])
-		@test jgtb.b[2] == std(gtb2.b[[3, 4]])
-		@test jgtb.b[3] == std(gtb2.b[[6, 7]])
-		@test jgtb.b[4] == std(gtb2.b[[8, 9]])
-
-		jgtb = geojoin(gtb2, gtb1)
-		@test propertynames(jgtb) == [:b, :a, :geometry]
-		@test jgtb.geometry == gtb2.geometry
-		@test jgtb.b == gtb2.b
-		@test isequal(jgtb.a, [1, 1, 2, 2, missing, 3, 3, 4, 4])
-
-		jgtb = geojoin(gtb3, gtb1, pred = issubset)
-		@test propertynames(jgtb) == [:c, :a, :geometry]
-		@test jgtb.geometry == gtb3.geometry
-		@test jgtb.c == gtb3.c
-		@test jgtb.a[linds[9, 2]] == 2
-		@test jgtb.a[linds[9, 3]] == 2
-		@test jgtb.a[linds[5, 9]] == 4
-		@test jgtb.a[linds[4, 9]] == 4
-
-		jgtb = geojoin(gtb2, gtb3, :c => last, pred = issubset)
-		@test propertynames(jgtb) == [:b, :c, :geometry]
-		@test jgtb.geometry == gtb2.geometry
-		@test jgtb.b == gtb2.b
-		@test jgtb.c[1] == last(gtb3.c[pointquads[1]])
-		@test jgtb.c[2] == last(gtb3.c[pointquads[2]])
-		@test jgtb.c[3] == last(gtb3.c[pointquads[3]])
-		@test jgtb.c[4] == last(gtb3.c[pointquads[4]])
-		@test jgtb.c[5] == last(gtb3.c[pointquads[5]])
-		@test jgtb.c[6] == last(gtb3.c[pointquads[6]])
-		@test jgtb.c[7] == last(gtb3.c[pointquads[7]])
-		@test jgtb.c[8] == last(gtb3.c[pointquads[8]])
-		@test jgtb.c[9] == last(gtb3.c[pointquads[9]])
-
-		# inner join
-		jgtb = geojoin(gtb1, gtb2, :b => std, kind = :inner)
-		@test propertynames(jgtb) == [:a, :b, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test jgtb.b[1] == std(gtb2.b[[1, 2]])
-		@test jgtb.b[2] == std(gtb2.b[[3, 4]])
-		@test jgtb.b[3] == std(gtb2.b[[6, 7]])
-		@test jgtb.b[4] == std(gtb2.b[[8, 9]])
-
-		jgtb = geojoin(gtb2, gtb1, kind = :inner)
-		inds = [1, 2, 3, 4, 6, 7, 8, 9]
-		@test propertynames(jgtb) == [:b, :a, :geometry]
-		@test jgtb.geometry == view(gtb2.geometry, inds)
-		@test jgtb.b == gtb2.b[inds]
-		@test jgtb.a == [1, 1, 2, 2, 3, 3, 4, 4]
-
-		jgtb = geojoin(gtb3, gtb2, :b => last, kind = :inner)
-		inds = sort(unique(reduce(vcat, pointquads)))
-		@test propertynames(jgtb) == [:c, :b, :geometry]
-		@test jgtb.geometry == view(gtb3.geometry, inds)
-		@test jgtb.c == gtb3.c[inds]
-		@test jgtb.b[findfirst(==(pointquads[1][2]), inds)] == gtb2.b[1]
-		@test jgtb.b[findfirst(==(pointquads[2][2]), inds)] == gtb2.b[2]
-		@test jgtb.b[findfirst(==(pointquads[3][2]), inds)] == gtb2.b[3]
-		@test jgtb.b[findfirst(==(pointquads[4][2]), inds)] == gtb2.b[4]
-		@test jgtb.b[findfirst(==(pointquads[5][2]), inds)] == gtb2.b[5]
-		@test jgtb.b[findfirst(==(pointquads[6][2]), inds)] == gtb2.b[6]
-		@test jgtb.b[findfirst(==(pointquads[7][2]), inds)] == gtb2.b[7]
-		@test jgtb.b[findfirst(==(pointquads[8][2]), inds)] == gtb2.b[8]
-		@test jgtb.b[findfirst(==(pointquads[9][2]), inds)] == gtb2.b[9]
-
-		# units
-		gtb4 = georef((; d = rand(9) * u"K"), pset)
-		jgtb = geojoin(gtb1, gtb4)
-		@test propertynames(jgtb) == [:a, :d, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test unit(eltype(jgtb.d)) == u"K"
-		@test jgtb.d[1] == mean(gtb4.d[[1, 2]])
-		@test jgtb.d[2] == mean(gtb4.d[[3, 4]])
-		@test jgtb.d[3] == mean(gtb4.d[[6, 7]])
-		@test jgtb.d[4] == mean(gtb4.d[[8, 9]])
-
-		# affine units
-		gtb5 = georef((; e = rand(9) * u"°C"), pset)
-		jgtb = geojoin(gtb1, gtb5)
-		ngtb = GeoTables._adjustunits(gtb5)
-		@test propertynames(jgtb) == [:a, :e, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test unit(eltype(jgtb.e)) == u"K"
-		@test jgtb.e[1] == mean(ngtb.e[[1, 2]])
-		@test jgtb.e[2] == mean(ngtb.e[[3, 4]])
-		@test jgtb.e[3] == mean(ngtb.e[[6, 7]])
-		@test jgtb.e[4] == mean(ngtb.e[[8, 9]])
-
-		# units and missings
-		gtb6 = georef((; f = [rand(4); missing; rand(4)] * u"°C"), pset)
-		jgtb = geojoin(gtb1, gtb6)
-		ngtb = GeoTables._adjustunits(gtb6)
-		@test propertynames(jgtb) == [:a, :f, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test unit(eltype(jgtb.f)) == u"K"
-		@test jgtb.f[1] == mean(ngtb.f[[1, 2]])
-		@test jgtb.f[2] == mean(ngtb.f[[3, 4]])
-		@test jgtb.f[3] == mean(ngtb.f[[6, 7]])
-		@test jgtb.f[4] == mean(ngtb.f[[8, 9]])
-
-		# quantity aggregation
-		box1 = Box((0, 0), (1, 1))
-		box2 = Box((1, 1), (2, 2))
-		pts = [(0.5, 0.5), (1.2, 1.2), (1.8, 1.8)]
-		gtb1 = georef((; a = rand(2)), [box1, box2])
-		gtb2 = georef((; b = [1, 2, 3] * u"K"), pts)
-		gtb3 = georef((; c = [1.0, 2.0, 3.0] * u"K"), pts)
-		jgtb = geojoin(gtb1, gtb2)
-		@test propertynames(jgtb) == [:a, :b, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test unit(eltype(jgtb.b)) == u"K"
-		@test Unitful.numtype(eltype(jgtb.b)) <: Int
-		@test jgtb.b[1] == first(gtb2.b[[1]])
-		@test jgtb.b[2] == first(gtb2.b[[2, 3]])
-		jgtb = geojoin(gtb1, gtb3)
-		@test propertynames(jgtb) == [:a, :c, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test unit(eltype(jgtb.c)) == u"K"
-		@test Unitful.numtype(eltype(jgtb.c)) <: Float64
-		@test jgtb.c[1] == mean(gtb3.c[[1]])
-		@test jgtb.c[2] == mean(gtb3.c[[2, 3]])
-
-		# missing columns
-		gtb1 = georef((; a = fill(missing, 4)), gset)
-		gtb2 = georef((; b = rand(9)), pset)
-		jgtb = geojoin(gtb1, gtb2)
-		@test propertynames(jgtb) == [:a, :b, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test isequal(jgtb.a, gtb1.a)
-		@test jgtb.b[1] == mean(gtb2.b[[1, 2]])
-		@test jgtb.b[2] == mean(gtb2.b[[3, 4]])
-		@test jgtb.b[3] == mean(gtb2.b[[6, 7]])
-		@test jgtb.b[4] == mean(gtb2.b[[8, 9]])
-		jgtb = geojoin(gtb2, gtb1)
-		@test propertynames(jgtb) == [:b, :a, :geometry]
-		@test jgtb.geometry == gtb2.geometry
-		@test isequal(jgtb.a, fill(missing, 9))
-		@test jgtb.b == gtb2.b
-
-		# different CRS
-		gtb1 = georef((; a = 1:4), gset) |> Proj(Mercator{WGS84Latest})
-		gtb2 = georef((; b = rand(9)), pset)
-		jgtb = geojoin(gtb1, gtb2)
-		@test propertynames(jgtb) == [:a, :b, :geometry]
-		@test crs(jgtb.geometry) <: Mercator{WGS84Latest}
-		@test jgtb.geometry == gtb1.geometry
-		@test isequal(jgtb.a, gtb1.a)
-		@test jgtb.b[1] == mean(gtb2.b[[1, 2]])
-		@test jgtb.b[2] == mean(gtb2.b[[3, 4]])
-		@test jgtb.b[3] == mean(gtb2.b[[6, 7]])
-		@test jgtb.b[4] == mean(gtb2.b[[8, 9]])
-
-		# "on" kwarg
-		tab1 = (a = 1:4, b = ["a", "b", "c", "d"])
-		tab2 = (a = [1, 1, 0, 0, 0, 3, 3, 0, 0], b = ["a", "z", "z", "z", "z", "z", "c", "z", "z"], c = rand(9))
-		gtb1 = georef(tab1, gset)
-		gtb2 = georef(tab2, pset)
-
-		# left join
-		jgtb = geojoin(gtb1, gtb2, on = :a)
-		@test propertynames(jgtb) == [:a, :b, :b_, :c, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test jgtb.b == gtb1.b
-		@test jgtb.b_[1] == first(gtb2.b[[1, 2]])
-		@test ismissing(jgtb.b_[2])
-		@test jgtb.b_[3] == first(gtb2.b[[6, 7]])
-		@test ismissing(jgtb.b_[4])
-		@test jgtb.c[1] == mean(gtb2.c[[1, 2]])
-		@test ismissing(jgtb.c[2])
-		@test jgtb.c[3] == mean(gtb2.c[[6, 7]])
-		@test ismissing(jgtb.c[4])
-
-		jgtb = geojoin(gtb1, gtb2, on = ["a", "b"])
-		@test propertynames(jgtb) == [:a, :b, :c, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test jgtb.b == gtb1.b
-		@test jgtb.c[1] == gtb2.c[1]
-		@test ismissing(jgtb.c[2])
-		@test jgtb.c[3] == gtb2.c[7]
-		@test ismissing(jgtb.c[4])
-
-		# inner join
-		jgtb = geojoin(gtb1, gtb2, kind = :inner, on = "a")
-		@test nrow(jgtb) == 2
-		@test propertynames(jgtb) == [:a, :b, :b_, :c, :geometry]
-		@test jgtb.geometry == view(gtb1.geometry, [1, 3])
-		@test jgtb.a == gtb1.a[[1, 3]]
-		@test jgtb.b == gtb1.b[[1, 3]]
-		@test jgtb.b_[1] == first(gtb2.b[[1, 2]])
-		@test jgtb.b_[2] == first(gtb2.b[[6, 7]])
-		@test jgtb.c[1] == mean(gtb2.c[[1, 2]])
-		@test jgtb.c[2] == mean(gtb2.c[[6, 7]])
-
-		jgtb = geojoin(gtb1, gtb2, kind = :inner, on = [:a, :b])
-		@test nrow(jgtb) == 2
-		@test propertynames(jgtb) == [:a, :b, :c, :geometry]
-		@test jgtb.geometry == view(gtb1.geometry, [1, 3])
-		@test jgtb.a == gtb1.a[[1, 3]]
-		@test jgtb.b == gtb1.b[[1, 3]]
-		@test jgtb.c[1] == gtb2.c[1]
-		@test jgtb.c[2] == gtb2.c[7]
-
-		# error: invalid kind of join
-		@test_throws ArgumentError geojoin(gtb1, gtb2, kind = :test, on = :a)
-		# error: all variables in "on" kwarg must exist in both geotables
-		@test_throws ArgumentError geojoin(gtb1, gtb2, on = [:a, :c])
-	end
-
-	@testset "tablejoin" begin
-		tab1 = (a = 1:4, b = ["a", "b", "c", "d"])
-		tab2 = (a = [1, 1, 0, 0, 0, 3, 3, 0, 0], b = ["a", "z", "z", "z", "z", "z", "c", "z", "z"], c = rand(9))
-		gtb1 = georef(tab1, rand(Point, 4))
-
-		# left join
-		jgtb = tablejoin(gtb1, tab2, on = :a)
-		@test propertynames(jgtb) == [:a, :b, :b_, :c, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test jgtb.b == gtb1.b
-		@test jgtb.b_[1] == first(tab2.b[[1, 2]])
-		@test ismissing(jgtb.b_[2])
-		@test jgtb.b_[3] == first(tab2.b[[6, 7]])
-		@test ismissing(jgtb.b_[4])
-		@test jgtb.c[1] == mean(tab2.c[[1, 2]])
-		@test ismissing(jgtb.c[2])
-		@test jgtb.c[3] == mean(tab2.c[[6, 7]])
-		@test ismissing(jgtb.c[4])
-
-		jgtb = tablejoin(gtb1, tab2, on = ["a", "b"])
-		@test propertynames(jgtb) == [:a, :b, :c, :geometry]
-		@test jgtb.geometry == gtb1.geometry
-		@test jgtb.a == gtb1.a
-		@test jgtb.b == gtb1.b
-		@test jgtb.c[1] == tab2.c[1]
-		@test ismissing(jgtb.c[2])
-		@test jgtb.c[3] == tab2.c[7]
-		@test ismissing(jgtb.c[4])
-
-		# inner join
-		jgtb = tablejoin(gtb1, tab2, kind = :inner, on = "a")
-		@test nrow(jgtb) == 2
-		@test propertynames(jgtb) == [:a, :b, :b_, :c, :geometry]
-		@test jgtb.geometry == view(gtb1.geometry, [1, 3])
-		@test jgtb.a == gtb1.a[[1, 3]]
-		@test jgtb.b == gtb1.b[[1, 3]]
-		@test jgtb.b_[1] == first(tab2.b[[1, 2]])
-		@test jgtb.b_[2] == first(tab2.b[[6, 7]])
-		@test jgtb.c[1] == mean(tab2.c[[1, 2]])
-		@test jgtb.c[2] == mean(tab2.c[[6, 7]])
-
-		jgtb = tablejoin(gtb1, tab2, kind = :inner, on = [:a, :b])
-		@test nrow(jgtb) == 2
-		@test propertynames(jgtb) == [:a, :b, :c, :geometry]
-		@test jgtb.geometry == view(gtb1.geometry, [1, 3])
-		@test jgtb.a == gtb1.a[[1, 3]]
-		@test jgtb.b == gtb1.b[[1, 3]]
-		@test jgtb.c[1] == tab2.c[1]
-		@test jgtb.c[2] == tab2.c[7]
-
-		# error: invalid kind of join
-		@test_throws ArgumentError tablejoin(gtb1, tab2, kind = :test, on = :a)
-		# error: all variables in "on" kwarg must exist in geotable and table
-		@test_throws ArgumentError tablejoin(gtb1, tab2, on = [:a, :c])
-	end
-
-	@testset "@groupby" begin
-		d = georef((z = [1, 2, 3], x = [4, 5, 6]), rand(Point, 3))
-		g = @groupby(d, :z)
-		@test all(nrow.(g) .== 1)
-		rows = [[1 4], [2 5], [3 6]]
-		for i in 1:3
-			@test Tables.matrix(values(g[i])) ∈ rows
-		end
-
-		z = vec([1 1 1; 2 2 2; 3 3 3])
-		sdata = georef((z = z,), CartesianGrid(3, 3))
-		p = @groupby(sdata, :z)
-		@test indices(p) == [[1, 4, 7], [2, 5, 8], [3, 6, 9]]
-
-		# groupby with missing values
-		z = vec([missing 1 1; 2 missing 2; 3 3 missing])
-		sdata = georef((z = z,), CartesianGrid(3, 3))
-		p = @groupby(sdata, :z)
-		@test indices(p) == [[1, 5, 9], [2, 8], [3, 6], [4, 7]]
-
-		# macro
-		x = [1, 1, 1, 1, 2, 2, 2, 2]
-		y = [1, 1, 2, 2, 3, 3, 4, 4]
-		z = [1, 2, 3, 4, 5, 6, 7, 8]
-		table = (; x, y, z)
-		sdata = georef(table, rand(Point, 8))
-
-		# args...
-		# integers
-		p = @groupby(sdata, 1)
-		@test indices(p) == [[1, 2, 3, 4], [5, 6, 7, 8]]
-		# symbols
-		p = @groupby(sdata, :y)
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-		# strings
-		p = @groupby(sdata, "x", "y")
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-
-		# vector...
-		# integers
-		p = @groupby(sdata, [1])
-		@test indices(p) == [[1, 2, 3, 4], [5, 6, 7, 8]]
-		# symbols
-		p = @groupby(sdata, [:y])
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-		# strings
-		p = @groupby(sdata, ["x", "y"])
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-
-		# tuple...
-		# integers
-		p = @groupby(sdata, (1,))
-		@test indices(p) == [[1, 2, 3, 4], [5, 6, 7, 8]]
-		# symbols
-		p = @groupby(sdata, (:y,))
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-		# strings
-		p = @groupby(sdata, ("x", "y"))
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-
-		# regex
-		p = @groupby(sdata, r"[xy]")
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-
-		# variable interpolation
-		cols = (:x, :y)
-		p = @groupby(sdata, cols)
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-		p = @groupby(sdata, cols...)
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-
-		c1, c2 = :x, :y
-		p = @groupby(sdata, c1, c2)
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-		p = @groupby(sdata, [c1, c2])
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-		p = @groupby(sdata, (c1, c2))
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-
-		# missing values
-		x = [1, 1, missing, missing, 2, 2, 2, 2]
-		y = [1, 1, 2, 2, 3, 3, missing, missing]
-		z = [1, 2, 3, 4, 5, 6, 7, 8]
-		table = (; x, y, z)
-		sdata = georef(table, rand(Point, 8))
-
-		p = @groupby(sdata, :x)
-		@test indices(p) == [[1, 2], [3, 4], [5, 6, 7, 8]]
-		p = @groupby(sdata, :x, :y)
-		@test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
-
-		# isequal
-		x = [0.0, 0, 0, -0.0, 2, 2, 2, 2]
-		y = [1, 1, 2, 2, 3, 3, 4, 4]
-		z = [1, 2, 3, 4, 5, 6, 7, 8]
-		table = (; x, y, z)
-		sdata = georef(table, rand(Point, 8))
-
-		p = @groupby(sdata, :x)
-		@test indices(p) == [[1, 2, 3], [4], [5, 6, 7, 8]]
-		p = @groupby(sdata, :x, :y)
-		@test indices(p) == [[1, 2], [3], [4], [5, 6], [7, 8]]
-
-		# expression as first argument
-		x = [1, 1, 1, 1, 2, 2, 2, 2]
-		y = [1, 1, 2, 2, 3, 3, 4, 4]
-		table = (; x, y)
-		sdata = georef(table, CartesianGrid(2, 4))
-		opr(sdata) = georef(values(sdata), GeometrySet(centroid.(domain(sdata))))
-
-		p = @groupby(sdata |> opr, :x)
-		pinds = [[1, 2, 3, 4], [5, 6, 7, 8]]
-		@test indices(p) == pinds
-		for (pdata, inds) in zip(p, pinds)
-			@test pdata.geometry == GeometrySet(centroid.(domain(sdata)[inds]))
-		end
-
-		p = @groupby(sdata |> opr, :y)
-		pinds = [[1, 2], [3, 4], [5, 6], [7, 8]]
-		@test indices(p) == pinds
-		for (pdata, inds) in zip(p, pinds)
-			@test pdata.geometry == GeometrySet(centroid.(domain(sdata)[inds]))
-		end
-	end
-
-	@testset "@transform" begin
-		table = (x = rand(10), y = rand(10))
-		sdata = georef(table, rand(Point, 10))
-
-		ndata = @transform(sdata, :z = :x - 2 * :y)
-		@test ndata.z == sdata.x .- 2 .* sdata.y
-
-		ndata = @transform(sdata, :z = :x - :y, :w = :x + :y)
-		@test ndata.z == sdata.x .- sdata.y
-		@test ndata.w == sdata.x .+ sdata.y
-
-		ndata = @transform(sdata, :sinx = sin(:x), :cosy = cos(:y))
-		@test ndata.sinx == sin.(sdata.x)
-		@test ndata.cosy == cos.(sdata.y)
-
-		# user defined functions & :geometry
-		dist(point) = norm(to(point))
-		ndata = @transform(sdata, :dist_to_origin = dist(:geometry))
-		@test ndata.dist_to_origin == dist.(domain(sdata))
-
-		# replace :geometry column
-		testfunc(point) = Point((to(point) .+ 1u"m")...)
-		ndata = @transform(sdata, :geometry = testfunc(:geometry))
-		@test domain(ndata) == GeometrySet(testfunc.(domain(sdata)))
-
-		# unexported functions
-		ndata = @transform(sdata, :logx = Base.log(:x), :expy = Base.exp(:y))
-		@test ndata.logx == log.(sdata.x)
-		@test ndata.expy == exp.(sdata.y)
-
-		# column name interpolation
-		ndata = @transform(sdata, {"z"} = {"x"} - 2 * {"y"})
-		@test ndata.z == sdata.x .- 2 .* sdata.y
-
-		xnm, ynm, znm = :x, :y, :z
-		ndata = @transform(sdata, {znm} = {xnm} - 2 * {ynm})
-		@test ndata.z == sdata.x .- 2 .* sdata.y
-
-		# variable interpolation
-		k = 10
-		ndata = @transform(sdata, :z = k + :y, :w = :x - k)
-		@test ndata.z == k .+ sdata.y
-		@test ndata.w == sdata.x .- k
-
-		# contant columns
-		k = 1
-		ndata = @transform(sdata, :z = k, :w = 5, :a = 1.5, :b = "test")
-		@test ndata.z == fill(k, nrow(sdata))
-		@test ndata.w == fill(5, nrow(sdata))
-		@test ndata.a == fill(1.5, nrow(sdata))
-		@test ndata.b == fill("test", nrow(sdata))
-
-		# string literals
-		ndata = @transform(sdata, :x_str = join([:x, "test"]))
-		@test ndata.x_str == [join([x, "test"]) for x in sdata.x]
-
-		# obj.field syntax
-		ndata = @transform(sdata, :cx = coords(:geometry).x)
-		@test ndata.cx == [coords(p).x for p in sdata.geometry]
-
-		# column replacement
-		table = (x = rand(10), y = rand(10), z = rand(10))
-		sdata = georef(table, rand(Point, 10))
-
-		ndata = @transform(sdata, :z = :x + :y, :w = :x - :y)
-		@test ndata.z == sdata.x .+ sdata.y
-		@test ndata.w == sdata.x .- sdata.y
-		@test Tables.schema(values(ndata)).names == (:x, :y, :z, :w)
-
-		ndata = @transform(sdata, :x = :y, :y = :z, :z = :x)
-		@test ndata.x == sdata.y
-		@test ndata.y == sdata.z
-		@test ndata.z == sdata.x
-		@test Tables.schema(values(ndata)).names == (:x, :y, :z)
-
-		# missing values
-		x = [1, 1, missing, missing, 2, 2, 2, 2]
-		y = [1, 1, 2, 2, 3, 3, missing, missing]
-		table = (; x, y)
-		sdata = georef(table, rand(Point, 8))
-
-		ndata = @transform(sdata, :z = :x * :y, :w = :x / :y)
-		@test isequal(ndata.z, sdata.x .* sdata.y)
-		@test isequal(ndata.w, sdata.x ./ sdata.y)
-
-		# Partition
-		x = [1, 1, 1, 1, 2, 2, 2, 2]
-		y = [1, 1, 2, 2, 3, 3, 4, 4]
-		z = [1, 2, 3, 4, 5, 6, 7, 8]
-		table = (; x, y, z)
-		sdata = georef(table, rand(Point, 8))
-
-		p = @groupby(sdata, :x, :y)
-		np = @transform(p, :z = 2 * :x + :y)
-		@test np.object.z == 2 .* sdata.x .+ sdata.y
-		@test indices(np) == indices(p)
-		@test metadata(np) == metadata(p)
-
-		# expression as first argument
-		table = (x = rand(25), y = rand(25))
-		sdata = georef(table, CartesianGrid(5, 5))
-		opr(sdata) = georef(values(sdata), GeometrySet(centroid.(domain(sdata))))
-
-		ndata = @transform(sdata |> opr, :z = :x - 2 * :y)
-		@test ndata.z == sdata.x .- 2 .* sdata.y
-		@test ndata.geometry == GeometrySet(centroid.(domain(sdata)))
-
-		@test_throws ArgumentError @transform(p, :x = 3 * :x)
-		@test_throws ArgumentError @transform(p, :y = 3 * :y)
-	end
-
-	@testset "@combine" begin
-		x = [1, 1, 1, 1, 2, 2, 2, 2]
-		y = [1, 1, 2, 2, 3, 3, 4, 4]
-		z = [1, 2, 3, 4, 5, 6, 7, 8]
-		table = (; x, y, z)
-		grid = CartesianGrid(2, 4)
-		sdata = georef(table, grid)
-
-		c = @combine(sdata, :x_sum = sum(:x))
-		@test c.x_sum == [sum(sdata.x)]
-		@test domain(c) == GeometrySet([Multi(domain(sdata))])
-		@test Tables.schema(values(c)).names == (:x_sum,)
-
-		c = @combine(sdata, :y_mean = mean(:y), :z_median = median(:z))
-		@test c.y_mean == [mean(sdata.y)]
-		@test c.z_median == [median(sdata.z)]
-		@test domain(c) == GeometrySet([Multi(domain(sdata))])
-		@test Tables.schema(values(c)).names == (:y_mean, :z_median)
-
-		# combine geometry column
-		c = @combine(sdata, :geometry = centroid(:geometry))
-		@test isnothing(values(c))
-		@test domain(c) == GeometrySet([centroid(domain(sdata))])
-		c = @combine(sdata, :y_mean = mean(:y), :geometry = centroid(:geometry))
-		@test c.y_mean == [mean(sdata.y)]
-		@test domain(c) == GeometrySet([centroid(domain(sdata))])
-
-		# column name interpolation
-		c = @combine(sdata, {"z"} = sum({"x"}) + prod({"y"}))
-		@test c.z == [sum(sdata.x) + prod(sdata.y)]
-
-		xnm, ynm, znm = :x, :y, :z
-		c = @combine(sdata, {znm} = sum({xnm}) + prod({ynm}))
-		@test c.z == [sum(sdata.x) + prod(sdata.y)]
-
-		# Partition
-		p = @groupby(sdata, :x)
-		c = @combine(p, :y_sum = sum(:y), :z_prod = prod(:z))
-		@test c.x == [first(data.x) for data in p]
-		@test c.y_sum == [sum(data.y) for data in p]
-		@test c.z_prod == [prod(data.z) for data in p]
-		@test domain(c) == GeometrySet([Multi(domain(data)) for data in p])
-		@test Tables.schema(values(c)).names == (:x, :y_sum, :z_prod)
-
-		p = @groupby(sdata, :x, :y)
-		c = @combine(p, :z_mean = mean(:z))
-		@test c.x == [first(data.x) for data in p]
-		@test c.y == [first(data.y) for data in p]
-		@test c.z_mean == [mean(data.z) for data in p]
-		@test domain(c) == GeometrySet([Multi(domain(data)) for data in p])
-		@test Tables.schema(values(c)).names == (:x, :y, :z_mean)
-
-		# combine geometry column
-		p = @groupby(sdata, :x, :y)
-		c = @combine(p, :geometry = centroid(:geometry))
-		@test c.x == [first(data.x) for data in p]
-		@test c.y == [first(data.y) for data in p]
-		@test domain(c) == GeometrySet([centroid(domain(data)) for data in p])
-		c = @combine(p, :z_mean = mean(:z), :geometry = centroid(:geometry))
-		@test c.x == [first(data.x) for data in p]
-		@test c.y == [first(data.y) for data in p]
-		@test c.z_mean == [mean(data.z) for data in p]
-		@test domain(c) == GeometrySet([centroid(domain(data)) for data in p])
-
-		# expression as first argument
-		opr(sdata) = georef(values(sdata), GeometrySet(centroid.(domain(sdata))))
-
-		c = @combine(sdata |> opr, :x_sum = sum(:x))
-		@test c.x_sum == [sum(sdata.x)]
-		@test domain(c) == GeometrySet([Multi(centroid.(domain(sdata)))])
-		@test Tables.schema(values(c)).names == (:x_sum,)
-
-		# https://github.com/JuliaEarth/GeoStats.jl/issues/542
-		sdata = georef((; c = rand(1:2, 10, 10)))
-		p = @groupby(sdata, :c)
-		c = @combine(p, :s = sum(:c))
-		c = @combine(p, :s = sum(:c))
-		@test all(≤(200), c.s)
-	end
-
-	@testset "overlay" begin
-		# basic intersection
-		poly1 = Box((0, 0), (2, 2))
-		poly2 = Box((1, 1), (3, 3))
-		poly3 = Box((4, 4), (5, 5))
-
-		gtb1 = georef((; a = [1, 2]), GeometrySet([poly1, poly3]))
-		gtb2 = georef((; b = [10]), GeometrySet([poly2]))
-
-		ogtb = overlay(gtb1, gtb2)
-
-		expected = poly1 ∩ poly2
-
-		@test propertynames(ogtb) == [:a, :b, :geometry]
-		@test nrow(ogtb) == 1
-		@test ogtb.a == [1]
-		@test ogtb.b == [10]
-		@test ogtb.geometry == GeometrySet([expected])
-
-		# explicit method
-		ogtb = overlay(gtb1, gtb2, method = :intersection)
-
-		@test propertynames(ogtb) == [:a, :b, :geometry]
-		@test nrow(ogtb) == 1
-		@test ogtb.a == [1]
-		@test ogtb.b == [10]
-		@test ogtb.geometry == GeometrySet([expected])
-
-		# multiple matches for one left geometry
-		poly4 = Box((1.5, 1.5), (2.5, 2.5))
-
-		gtb1 = georef((; a = [1]), GeometrySet([poly1]))
-		gtb2 = georef((; b = [10, 20]), GeometrySet([poly2, poly4]))
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test propertynames(ogtb) == [:a, :b, :geometry]
-		@test nrow(ogtb) == 2
-		@test ogtb.a == [1, 1]
-		@test ogtb.b == [10, 20]
-		@test ogtb.geometry == GeometrySet([
-			poly1 ∩ poly2,
-			poly1 ∩ poly4,
-		])
-
-		# multiple matches involving both geotables
-		left1 = Box((0, 0), (2, 2))
-		left2 = Box((2, 0), (4, 2))
-
-		right1 = Box((1, 1), (3, 3))
-		right2 = Box((3, 1), (5, 3))
-
-		gtb1 = georef((; a = [1, 2]), GeometrySet([left1, left2]))
-		gtb2 = georef((; b = [10, 20]), GeometrySet([right1, right2]))
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test propertynames(ogtb) == [:a, :b, :geometry]
-		@test nrow(ogtb) == 3
-		@test ogtb.a == [1, 2, 2]
-		@test ogtb.b == [10, 10, 20]
-		@test ogtb.geometry == GeometrySet([
-			left1 ∩ right1,
-			left2 ∩ right1,
-			left2 ∩ right2,
-		])
-
-		# nonintersecting geometries are omitted
-		gtb1 = georef(
-			(; a = [1, 2]),
-			GeometrySet([
-				Box((0, 0), (2, 2)),
-				Box((10, 10), (11, 11)),
-			]),
-		)
-
-		gtb2 = georef(
-			(; b = [10]),
-			GeometrySet([
-				Box((1, 1), (3, 3)),
-			]),
-		)
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test nrow(ogtb) == 1
-		@test ogtb.a == [1]
-		@test ogtb.b == [10]
-		@test ogtb.geometry == GeometrySet([
-			Box((0, 0), (2, 2)) ∩ Box((1, 1), (3, 3)),
-		])
-
-		# empty overlay
-		gtb1 = georef(
-			(; a = [1]),
-			GeometrySet([
-				Box((0, 0), (1, 1)),
-			]),
-		)
-
-		gtb2 = georef(
-			(; b = [2]),
-			GeometrySet([
-				Box((2, 2), (3, 3)),
-			]),
-		)
-
-		@test_throws ErrorException overlay(gtb1, gtb2)
-
-		# repeated variable names
-		gtb1 = georef(
-			(; a = [1], value = [10]),
-			GeometrySet([poly1]),
-		)
-
-		gtb2 = georef(
-			(; a = [2], value = [20]),
-			GeometrySet([poly2]),
-		)
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test propertynames(ogtb) ==
-			  [:a, :value, :a_, :value_, :geometry]
-		@test ogtb.a == [1]
-		@test ogtb.value == [10]
-		@test ogtb.a_ == [2]
-		@test ogtb.value_ == [20]
-		@test ogtb.geometry == GeometrySet([poly1 ∩ poly2])
-
-		# one repeated variable name
-		gtb1 = georef(
-			(; id = [1], leftvalue = [10]),
-			GeometrySet([poly1]),
-		)
-
-		gtb2 = georef(
-			(; id = [2], rightvalue = [20]),
-			GeometrySet([poly2]),
-		)
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test propertynames(ogtb) ==
-			  [:id, :leftvalue, :id_, :rightvalue, :geometry]
-		@test ogtb.id == [1]
-		@test ogtb.leftvalue == [10]
-		@test ogtb.id_ == [2]
-		@test ogtb.rightvalue == [20]
-
-		# units
-		gtb1 = georef(
-			(; temperature = [10.0] * u"K"),
-			GeometrySet([poly1]),
-		)
-
-		gtb2 = georef(
-			(; distance = [2.0] * u"m"),
-			GeometrySet([poly2]),
-		)
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test propertynames(ogtb) ==
-			  [:temperature, :distance, :geometry]
-		@test unit(eltype(ogtb.temperature)) == u"K"
-		@test unit(eltype(ogtb.distance)) == u"m"
-		@test ogtb.temperature == gtb1.temperature
-		@test ogtb.distance == gtb2.distance
-
-		# affine units
-		gtb1 = georef(
-			(; temperature = [20.0] * u"°C"),
-			GeometrySet([poly1]),
-		)
-
-		gtb2 = georef(
-			(; value = [1]),
-			GeometrySet([poly2]),
-		)
-
-		ngtb1 = GeoTables._adjustunits(gtb1)
-		ogtb = overlay(gtb1, gtb2)
-
-		@test propertynames(ogtb) ==
-			  [:temperature, :value, :geometry]
-		@test unit(eltype(ogtb.temperature)) == u"K"
-		@test ogtb.temperature == ngtb1.temperature
-		@test ogtb.value == [1]
-
-		# missing values
-		gtb1 = georef(
-			(; a = Union{Missing, Int}[missing]),
-			GeometrySet([poly1]),
-		)
-
-		gtb2 = georef(
-			(; b = Union{Missing, Float64}[missing]),
-			GeometrySet([poly2]),
-		)
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test nrow(ogtb) == 1
-		@test isequal(ogtb.a, [missing])
-		@test isequal(ogtb.b, [missing])
-		@test ogtb.geometry == GeometrySet([poly1 ∩ poly2])
-
-		# missing and nonmissing values
-		gtb1 = georef(
-			(; a = Union{Missing, Int}[1, missing]),
-			GeometrySet([
-				Box((0, 0), (2, 2)),
-				Box((2, 0), (4, 2)),
-			]),
-		)
-
-		gtb2 = georef(
-			(; b = [10]),
-			GeometrySet([
-				Box((1, 1), (3, 3)),
-			]),
-		)
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test nrow(ogtb) == 2
-		@test isequal(ogtb.a, [1, missing])
-		@test ogtb.b == [10, 10]
-
-		# different CRS
-		gtb1 = georef(
-			(; a = [1]),
-			GeometrySet([poly1]),
-		) |> Proj(Mercator{WGS84Latest})
-
-		gtb2 = georef(
-			(; b = [2]),
-			GeometrySet([poly2]),
-		)
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test propertynames(ogtb) == [:a, :b, :geometry]
-		@test nrow(ogtb) == 1
-		@test crs(ogtb.geometry) <: Mercator{WGS84Latest}
-		@test ogtb.a == [1]
-		@test ogtb.b == [2]
-
-		# touching intersection
-		box1 = Box((0, 0), (1, 1))
-		box2 = Box((1, 0), (2, 1))
-
-		gtb1 = georef((; a = [1]), GeometrySet([box1]))
-		gtb2 = georef((; b = [2]), GeometrySet([box2]))
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test nrow(ogtb) == 1
-		@test ogtb.a == [1]
-		@test ogtb.b == [2]
-		@test ogtb.geometry == GeometrySet([box1 ∩ box2])
-
-		# point-polygon intersection
-		poly = Box((0, 0), (2, 2))
-		points = PointSet((1, 1), (3, 3))
-
-		gtb1 = georef((; a = [1]), GeometrySet([poly]))
-		gtb2 = georef((; b = [10, 20]), points)
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test propertynames(ogtb) == [:a, :b, :geometry]
-		@test nrow(ogtb) == 1
-		@test ogtb.a == [1]
-		@test ogtb.b == [10]
-		@test ogtb.geometry == GeometrySet([Point(1, 1)])
-
-		# reversed point-polygon order
-		gtb1 = georef((; a = [10, 20]), points)
-		gtb2 = georef((; b = [1]), GeometrySet([poly]))
-
-		ogtb = overlay(gtb1, gtb2)
-
-		@test propertynames(ogtb) == [:a, :b, :geometry]
-		@test nrow(ogtb) == 1
-		@test ogtb.a == [10]
-		@test ogtb.b == [1]
-		@test ogtb.geometry == GeometrySet([Point(1, 1)])
-
-		# invalid method
-		@test_throws ArgumentError overlay(
-			gtb1,
-			gtb2,
-			method = :union,
-		)
-
-		@test_throws ArgumentError overlay(
-			gtb1,
-			gtb2,
-			method = :difference,
-		)
-
-		@test_throws ArgumentError overlay(
-			gtb1,
-			gtb2,
-			method = :test,
-		)
-	end
+    # left join
+    jgtb = geojoin(gtb1, gtb2)
+    @test propertynames(jgtb) == [:a, :b, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test jgtb.b[1] == mean(gtb2.b[[1, 2]])
+    @test jgtb.b[2] == mean(gtb2.b[[3, 4]])
+    @test jgtb.b[3] == mean(gtb2.b[[6, 7]])
+    @test jgtb.b[4] == mean(gtb2.b[[8, 9]])
+
+    jgtb = geojoin(gtb1, gtb2, :b => std)
+    @test propertynames(jgtb) == [:a, :b, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test jgtb.b[1] == std(gtb2.b[[1, 2]])
+    @test jgtb.b[2] == std(gtb2.b[[3, 4]])
+    @test jgtb.b[3] == std(gtb2.b[[6, 7]])
+    @test jgtb.b[4] == std(gtb2.b[[8, 9]])
+
+    jgtb = geojoin(gtb2, gtb1)
+    @test propertynames(jgtb) == [:b, :a, :geometry]
+    @test jgtb.geometry == gtb2.geometry
+    @test jgtb.b == gtb2.b
+    @test isequal(jgtb.a, [1, 1, 2, 2, missing, 3, 3, 4, 4])
+
+    jgtb = geojoin(gtb3, gtb1, pred=issubset)
+    @test propertynames(jgtb) == [:c, :a, :geometry]
+    @test jgtb.geometry == gtb3.geometry
+    @test jgtb.c == gtb3.c
+    @test jgtb.a[linds[9, 2]] == 2
+    @test jgtb.a[linds[9, 3]] == 2
+    @test jgtb.a[linds[5, 9]] == 4
+    @test jgtb.a[linds[4, 9]] == 4
+
+    jgtb = geojoin(gtb2, gtb3, :c => last, pred=issubset)
+    @test propertynames(jgtb) == [:b, :c, :geometry]
+    @test jgtb.geometry == gtb2.geometry
+    @test jgtb.b == gtb2.b
+    @test jgtb.c[1] == last(gtb3.c[pointquads[1]])
+    @test jgtb.c[2] == last(gtb3.c[pointquads[2]])
+    @test jgtb.c[3] == last(gtb3.c[pointquads[3]])
+    @test jgtb.c[4] == last(gtb3.c[pointquads[4]])
+    @test jgtb.c[5] == last(gtb3.c[pointquads[5]])
+    @test jgtb.c[6] == last(gtb3.c[pointquads[6]])
+    @test jgtb.c[7] == last(gtb3.c[pointquads[7]])
+    @test jgtb.c[8] == last(gtb3.c[pointquads[8]])
+    @test jgtb.c[9] == last(gtb3.c[pointquads[9]])
+
+    # inner join
+    jgtb = geojoin(gtb1, gtb2, :b => std, kind=:inner)
+    @test propertynames(jgtb) == [:a, :b, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test jgtb.b[1] == std(gtb2.b[[1, 2]])
+    @test jgtb.b[2] == std(gtb2.b[[3, 4]])
+    @test jgtb.b[3] == std(gtb2.b[[6, 7]])
+    @test jgtb.b[4] == std(gtb2.b[[8, 9]])
+
+    jgtb = geojoin(gtb2, gtb1, kind=:inner)
+    inds = [1, 2, 3, 4, 6, 7, 8, 9]
+    @test propertynames(jgtb) == [:b, :a, :geometry]
+    @test jgtb.geometry == view(gtb2.geometry, inds)
+    @test jgtb.b == gtb2.b[inds]
+    @test jgtb.a == [1, 1, 2, 2, 3, 3, 4, 4]
+
+    jgtb = geojoin(gtb3, gtb2, :b => last, kind=:inner)
+    inds = sort(unique(reduce(vcat, pointquads)))
+    @test propertynames(jgtb) == [:c, :b, :geometry]
+    @test jgtb.geometry == view(gtb3.geometry, inds)
+    @test jgtb.c == gtb3.c[inds]
+    @test jgtb.b[findfirst(==(pointquads[1][2]), inds)] == gtb2.b[1]
+    @test jgtb.b[findfirst(==(pointquads[2][2]), inds)] == gtb2.b[2]
+    @test jgtb.b[findfirst(==(pointquads[3][2]), inds)] == gtb2.b[3]
+    @test jgtb.b[findfirst(==(pointquads[4][2]), inds)] == gtb2.b[4]
+    @test jgtb.b[findfirst(==(pointquads[5][2]), inds)] == gtb2.b[5]
+    @test jgtb.b[findfirst(==(pointquads[6][2]), inds)] == gtb2.b[6]
+    @test jgtb.b[findfirst(==(pointquads[7][2]), inds)] == gtb2.b[7]
+    @test jgtb.b[findfirst(==(pointquads[8][2]), inds)] == gtb2.b[8]
+    @test jgtb.b[findfirst(==(pointquads[9][2]), inds)] == gtb2.b[9]
+
+    # units
+    gtb4 = georef((; d=rand(9) * u"K"), pset)
+    jgtb = geojoin(gtb1, gtb4)
+    @test propertynames(jgtb) == [:a, :d, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test unit(eltype(jgtb.d)) == u"K"
+    @test jgtb.d[1] == mean(gtb4.d[[1, 2]])
+    @test jgtb.d[2] == mean(gtb4.d[[3, 4]])
+    @test jgtb.d[3] == mean(gtb4.d[[6, 7]])
+    @test jgtb.d[4] == mean(gtb4.d[[8, 9]])
+
+    # affine units
+    gtb5 = georef((; e=rand(9) * u"°C"), pset)
+    jgtb = geojoin(gtb1, gtb5)
+    ngtb = GeoTables._adjustunits(gtb5)
+    @test propertynames(jgtb) == [:a, :e, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test unit(eltype(jgtb.e)) == u"K"
+    @test jgtb.e[1] == mean(ngtb.e[[1, 2]])
+    @test jgtb.e[2] == mean(ngtb.e[[3, 4]])
+    @test jgtb.e[3] == mean(ngtb.e[[6, 7]])
+    @test jgtb.e[4] == mean(ngtb.e[[8, 9]])
+
+    # units and missings
+    gtb6 = georef((; f=[rand(4); missing; rand(4)] * u"°C"), pset)
+    jgtb = geojoin(gtb1, gtb6)
+    ngtb = GeoTables._adjustunits(gtb6)
+    @test propertynames(jgtb) == [:a, :f, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test unit(eltype(jgtb.f)) == u"K"
+    @test jgtb.f[1] == mean(ngtb.f[[1, 2]])
+    @test jgtb.f[2] == mean(ngtb.f[[3, 4]])
+    @test jgtb.f[3] == mean(ngtb.f[[6, 7]])
+    @test jgtb.f[4] == mean(ngtb.f[[8, 9]])
+
+    # quantity aggregation
+    box1 = Box((0, 0), (1, 1))
+    box2 = Box((1, 1), (2, 2))
+    pts = [(0.5, 0.5), (1.2, 1.2), (1.8, 1.8)]
+    gtb1 = georef((; a=rand(2)), [box1, box2])
+    gtb2 = georef((; b=[1, 2, 3] * u"K"), pts)
+    gtb3 = georef((; c=[1.0, 2.0, 3.0] * u"K"), pts)
+    jgtb = geojoin(gtb1, gtb2)
+    @test propertynames(jgtb) == [:a, :b, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test unit(eltype(jgtb.b)) == u"K"
+    @test Unitful.numtype(eltype(jgtb.b)) <: Int
+    @test jgtb.b[1] == first(gtb2.b[[1]])
+    @test jgtb.b[2] == first(gtb2.b[[2, 3]])
+    jgtb = geojoin(gtb1, gtb3)
+    @test propertynames(jgtb) == [:a, :c, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test unit(eltype(jgtb.c)) == u"K"
+    @test Unitful.numtype(eltype(jgtb.c)) <: Float64
+    @test jgtb.c[1] == mean(gtb3.c[[1]])
+    @test jgtb.c[2] == mean(gtb3.c[[2, 3]])
+
+    # missing columns
+    gtb1 = georef((; a=fill(missing, 4)), gset)
+    gtb2 = georef((; b=rand(9)), pset)
+    jgtb = geojoin(gtb1, gtb2)
+    @test propertynames(jgtb) == [:a, :b, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test isequal(jgtb.a, gtb1.a)
+    @test jgtb.b[1] == mean(gtb2.b[[1, 2]])
+    @test jgtb.b[2] == mean(gtb2.b[[3, 4]])
+    @test jgtb.b[3] == mean(gtb2.b[[6, 7]])
+    @test jgtb.b[4] == mean(gtb2.b[[8, 9]])
+    jgtb = geojoin(gtb2, gtb1)
+    @test propertynames(jgtb) == [:b, :a, :geometry]
+    @test jgtb.geometry == gtb2.geometry
+    @test isequal(jgtb.a, fill(missing, 9))
+    @test jgtb.b == gtb2.b
+
+    # different CRS
+    gtb1 = georef((; a=1:4), gset) |> Proj(Mercator{WGS84Latest})
+    gtb2 = georef((; b=rand(9)), pset)
+    jgtb = geojoin(gtb1, gtb2)
+    @test propertynames(jgtb) == [:a, :b, :geometry]
+    @test crs(jgtb.geometry) <: Mercator{WGS84Latest}
+    @test jgtb.geometry == gtb1.geometry
+    @test isequal(jgtb.a, gtb1.a)
+    @test jgtb.b[1] == mean(gtb2.b[[1, 2]])
+    @test jgtb.b[2] == mean(gtb2.b[[3, 4]])
+    @test jgtb.b[3] == mean(gtb2.b[[6, 7]])
+    @test jgtb.b[4] == mean(gtb2.b[[8, 9]])
+
+    # "on" kwarg
+    tab1 = (a=1:4, b=["a", "b", "c", "d"])
+    tab2 = (a=[1, 1, 0, 0, 0, 3, 3, 0, 0], b=["a", "z", "z", "z", "z", "z", "c", "z", "z"], c=rand(9))
+    gtb1 = georef(tab1, gset)
+    gtb2 = georef(tab2, pset)
+
+    # left join
+    jgtb = geojoin(gtb1, gtb2, on=:a)
+    @test propertynames(jgtb) == [:a, :b, :b_, :c, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test jgtb.b == gtb1.b
+    @test jgtb.b_[1] == first(gtb2.b[[1, 2]])
+    @test ismissing(jgtb.b_[2])
+    @test jgtb.b_[3] == first(gtb2.b[[6, 7]])
+    @test ismissing(jgtb.b_[4])
+    @test jgtb.c[1] == mean(gtb2.c[[1, 2]])
+    @test ismissing(jgtb.c[2])
+    @test jgtb.c[3] == mean(gtb2.c[[6, 7]])
+    @test ismissing(jgtb.c[4])
+
+    jgtb = geojoin(gtb1, gtb2, on=["a", "b"])
+    @test propertynames(jgtb) == [:a, :b, :c, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test jgtb.b == gtb1.b
+    @test jgtb.c[1] == gtb2.c[1]
+    @test ismissing(jgtb.c[2])
+    @test jgtb.c[3] == gtb2.c[7]
+    @test ismissing(jgtb.c[4])
+
+    # inner join
+    jgtb = geojoin(gtb1, gtb2, kind=:inner, on="a")
+    @test nrow(jgtb) == 2
+    @test propertynames(jgtb) == [:a, :b, :b_, :c, :geometry]
+    @test jgtb.geometry == view(gtb1.geometry, [1, 3])
+    @test jgtb.a == gtb1.a[[1, 3]]
+    @test jgtb.b == gtb1.b[[1, 3]]
+    @test jgtb.b_[1] == first(gtb2.b[[1, 2]])
+    @test jgtb.b_[2] == first(gtb2.b[[6, 7]])
+    @test jgtb.c[1] == mean(gtb2.c[[1, 2]])
+    @test jgtb.c[2] == mean(gtb2.c[[6, 7]])
+
+    jgtb = geojoin(gtb1, gtb2, kind=:inner, on=[:a, :b])
+    @test nrow(jgtb) == 2
+    @test propertynames(jgtb) == [:a, :b, :c, :geometry]
+    @test jgtb.geometry == view(gtb1.geometry, [1, 3])
+    @test jgtb.a == gtb1.a[[1, 3]]
+    @test jgtb.b == gtb1.b[[1, 3]]
+    @test jgtb.c[1] == gtb2.c[1]
+    @test jgtb.c[2] == gtb2.c[7]
+
+    # error: invalid kind of join
+    @test_throws ArgumentError geojoin(gtb1, gtb2, kind=:test, on=:a)
+    # error: all variables in "on" kwarg must exist in both geotables
+    @test_throws ArgumentError geojoin(gtb1, gtb2, on=[:a, :c])
+  end
+
+  @testset "tablejoin" begin
+    tab1 = (a=1:4, b=["a", "b", "c", "d"])
+    tab2 = (a=[1, 1, 0, 0, 0, 3, 3, 0, 0], b=["a", "z", "z", "z", "z", "z", "c", "z", "z"], c=rand(9))
+    gtb1 = georef(tab1, rand(Point, 4))
+
+    # left join
+    jgtb = tablejoin(gtb1, tab2, on=:a)
+    @test propertynames(jgtb) == [:a, :b, :b_, :c, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test jgtb.b == gtb1.b
+    @test jgtb.b_[1] == first(tab2.b[[1, 2]])
+    @test ismissing(jgtb.b_[2])
+    @test jgtb.b_[3] == first(tab2.b[[6, 7]])
+    @test ismissing(jgtb.b_[4])
+    @test jgtb.c[1] == mean(tab2.c[[1, 2]])
+    @test ismissing(jgtb.c[2])
+    @test jgtb.c[3] == mean(tab2.c[[6, 7]])
+    @test ismissing(jgtb.c[4])
+
+    jgtb = tablejoin(gtb1, tab2, on=["a", "b"])
+    @test propertynames(jgtb) == [:a, :b, :c, :geometry]
+    @test jgtb.geometry == gtb1.geometry
+    @test jgtb.a == gtb1.a
+    @test jgtb.b == gtb1.b
+    @test jgtb.c[1] == tab2.c[1]
+    @test ismissing(jgtb.c[2])
+    @test jgtb.c[3] == tab2.c[7]
+    @test ismissing(jgtb.c[4])
+
+    # inner join
+    jgtb = tablejoin(gtb1, tab2, kind=:inner, on="a")
+    @test nrow(jgtb) == 2
+    @test propertynames(jgtb) == [:a, :b, :b_, :c, :geometry]
+    @test jgtb.geometry == view(gtb1.geometry, [1, 3])
+    @test jgtb.a == gtb1.a[[1, 3]]
+    @test jgtb.b == gtb1.b[[1, 3]]
+    @test jgtb.b_[1] == first(tab2.b[[1, 2]])
+    @test jgtb.b_[2] == first(tab2.b[[6, 7]])
+    @test jgtb.c[1] == mean(tab2.c[[1, 2]])
+    @test jgtb.c[2] == mean(tab2.c[[6, 7]])
+
+    jgtb = tablejoin(gtb1, tab2, kind=:inner, on=[:a, :b])
+    @test nrow(jgtb) == 2
+    @test propertynames(jgtb) == [:a, :b, :c, :geometry]
+    @test jgtb.geometry == view(gtb1.geometry, [1, 3])
+    @test jgtb.a == gtb1.a[[1, 3]]
+    @test jgtb.b == gtb1.b[[1, 3]]
+    @test jgtb.c[1] == tab2.c[1]
+    @test jgtb.c[2] == tab2.c[7]
+
+    # error: invalid kind of join
+    @test_throws ArgumentError tablejoin(gtb1, tab2, kind=:test, on=:a)
+    # error: all variables in "on" kwarg must exist in geotable and table
+    @test_throws ArgumentError tablejoin(gtb1, tab2, on=[:a, :c])
+  end
+
+  @testset "@groupby" begin
+    d = georef((z=[1, 2, 3], x=[4, 5, 6]), rand(Point, 3))
+    g = @groupby(d, :z)
+    @test all(nrow.(g) .== 1)
+    rows = [[1 4], [2 5], [3 6]]
+    for i in 1:3
+      @test Tables.matrix(values(g[i])) ∈ rows
+    end
+
+    z = vec([1 1 1; 2 2 2; 3 3 3])
+    sdata = georef((z=z,), CartesianGrid(3, 3))
+    p = @groupby(sdata, :z)
+    @test indices(p) == [[1, 4, 7], [2, 5, 8], [3, 6, 9]]
+
+    # groupby with missing values
+    z = vec([missing 1 1; 2 missing 2; 3 3 missing])
+    sdata = georef((z=z,), CartesianGrid(3, 3))
+    p = @groupby(sdata, :z)
+    @test indices(p) == [[1, 5, 9], [2, 8], [3, 6], [4, 7]]
+
+    # macro
+    x = [1, 1, 1, 1, 2, 2, 2, 2]
+    y = [1, 1, 2, 2, 3, 3, 4, 4]
+    z = [1, 2, 3, 4, 5, 6, 7, 8]
+    table = (; x, y, z)
+    sdata = georef(table, rand(Point, 8))
+
+    # args...
+    # integers
+    p = @groupby(sdata, 1)
+    @test indices(p) == [[1, 2, 3, 4], [5, 6, 7, 8]]
+    # symbols
+    p = @groupby(sdata, :y)
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+    # strings
+    p = @groupby(sdata, "x", "y")
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+
+    # vector...
+    # integers
+    p = @groupby(sdata, [1])
+    @test indices(p) == [[1, 2, 3, 4], [5, 6, 7, 8]]
+    # symbols
+    p = @groupby(sdata, [:y])
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+    # strings
+    p = @groupby(sdata, ["x", "y"])
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+
+    # tuple...
+    # integers
+    p = @groupby(sdata, (1,))
+    @test indices(p) == [[1, 2, 3, 4], [5, 6, 7, 8]]
+    # symbols
+    p = @groupby(sdata, (:y,))
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+    # strings
+    p = @groupby(sdata, ("x", "y"))
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+
+    # regex
+    p = @groupby(sdata, r"[xy]")
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+
+    # variable interpolation
+    cols = (:x, :y)
+    p = @groupby(sdata, cols)
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+    p = @groupby(sdata, cols...)
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+
+    c1, c2 = :x, :y
+    p = @groupby(sdata, c1, c2)
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+    p = @groupby(sdata, [c1, c2])
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+    p = @groupby(sdata, (c1, c2))
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+
+    # missing values
+    x = [1, 1, missing, missing, 2, 2, 2, 2]
+    y = [1, 1, 2, 2, 3, 3, missing, missing]
+    z = [1, 2, 3, 4, 5, 6, 7, 8]
+    table = (; x, y, z)
+    sdata = georef(table, rand(Point, 8))
+
+    p = @groupby(sdata, :x)
+    @test indices(p) == [[1, 2], [3, 4], [5, 6, 7, 8]]
+    p = @groupby(sdata, :x, :y)
+    @test indices(p) == [[1, 2], [3, 4], [5, 6], [7, 8]]
+
+    # isequal
+    x = [0.0, 0, 0, -0.0, 2, 2, 2, 2]
+    y = [1, 1, 2, 2, 3, 3, 4, 4]
+    z = [1, 2, 3, 4, 5, 6, 7, 8]
+    table = (; x, y, z)
+    sdata = georef(table, rand(Point, 8))
+
+    p = @groupby(sdata, :x)
+    @test indices(p) == [[1, 2, 3], [4], [5, 6, 7, 8]]
+    p = @groupby(sdata, :x, :y)
+    @test indices(p) == [[1, 2], [3], [4], [5, 6], [7, 8]]
+
+    # expression as first argument
+    x = [1, 1, 1, 1, 2, 2, 2, 2]
+    y = [1, 1, 2, 2, 3, 3, 4, 4]
+    table = (; x, y)
+    sdata = georef(table, CartesianGrid(2, 4))
+    opr(sdata) = georef(values(sdata), GeometrySet(centroid.(domain(sdata))))
+
+    p = @groupby(sdata |> opr, :x)
+    pinds = [[1, 2, 3, 4], [5, 6, 7, 8]]
+    @test indices(p) == pinds
+    for (pdata, inds) in zip(p, pinds)
+      @test pdata.geometry == GeometrySet(centroid.(domain(sdata)[inds]))
+    end
+
+    p = @groupby(sdata |> opr, :y)
+    pinds = [[1, 2], [3, 4], [5, 6], [7, 8]]
+    @test indices(p) == pinds
+    for (pdata, inds) in zip(p, pinds)
+      @test pdata.geometry == GeometrySet(centroid.(domain(sdata)[inds]))
+    end
+  end
+
+  @testset "@transform" begin
+    table = (x=rand(10), y=rand(10))
+    sdata = georef(table, rand(Point, 10))
+
+    ndata = @transform(sdata, :z = :x - 2 * :y)
+    @test ndata.z == sdata.x .- 2 .* sdata.y
+
+    ndata = @transform(sdata, :z = :x - :y, :w = :x + :y)
+    @test ndata.z == sdata.x .- sdata.y
+    @test ndata.w == sdata.x .+ sdata.y
+
+    ndata = @transform(sdata, :sinx = sin(:x), :cosy = cos(:y))
+    @test ndata.sinx == sin.(sdata.x)
+    @test ndata.cosy == cos.(sdata.y)
+
+    # user defined functions & :geometry
+    dist(point) = norm(to(point))
+    ndata = @transform(sdata, :dist_to_origin = dist(:geometry))
+    @test ndata.dist_to_origin == dist.(domain(sdata))
+
+    # replace :geometry column
+    testfunc(point) = Point((to(point) .+ 1u"m")...)
+    ndata = @transform(sdata, :geometry = testfunc(:geometry))
+    @test domain(ndata) == GeometrySet(testfunc.(domain(sdata)))
+
+    # unexported functions
+    ndata = @transform(sdata, :logx = Base.log(:x), :expy = Base.exp(:y))
+    @test ndata.logx == log.(sdata.x)
+    @test ndata.expy == exp.(sdata.y)
+
+    # column name interpolation
+    ndata = @transform(sdata, {"z"} = {"x"} - 2 * {"y"})
+    @test ndata.z == sdata.x .- 2 .* sdata.y
+
+    xnm, ynm, znm = :x, :y, :z
+    ndata = @transform(sdata, {znm} = {xnm} - 2 * {ynm})
+    @test ndata.z == sdata.x .- 2 .* sdata.y
+
+    # variable interpolation
+    k = 10
+    ndata = @transform(sdata, :z = k + :y, :w = :x - k)
+    @test ndata.z == k .+ sdata.y
+    @test ndata.w == sdata.x .- k
+
+    # contant columns
+    k = 1
+    ndata = @transform(sdata, :z = k, :w = 5, :a = 1.5, :b = "test")
+    @test ndata.z == fill(k, nrow(sdata))
+    @test ndata.w == fill(5, nrow(sdata))
+    @test ndata.a == fill(1.5, nrow(sdata))
+    @test ndata.b == fill("test", nrow(sdata))
+
+    # string literals
+    ndata = @transform(sdata, :x_str = join([:x, "test"]))
+    @test ndata.x_str == [join([x, "test"]) for x in sdata.x]
+
+    # obj.field syntax
+    ndata = @transform(sdata, :cx = coords(:geometry).x)
+    @test ndata.cx == [coords(p).x for p in sdata.geometry]
+
+    # column replacement
+    table = (x=rand(10), y=rand(10), z=rand(10))
+    sdata = georef(table, rand(Point, 10))
+
+    ndata = @transform(sdata, :z = :x + :y, :w = :x - :y)
+    @test ndata.z == sdata.x .+ sdata.y
+    @test ndata.w == sdata.x .- sdata.y
+    @test Tables.schema(values(ndata)).names == (:x, :y, :z, :w)
+
+    ndata = @transform(sdata, :x = :y, :y = :z, :z = :x)
+    @test ndata.x == sdata.y
+    @test ndata.y == sdata.z
+    @test ndata.z == sdata.x
+    @test Tables.schema(values(ndata)).names == (:x, :y, :z)
+
+    # missing values
+    x = [1, 1, missing, missing, 2, 2, 2, 2]
+    y = [1, 1, 2, 2, 3, 3, missing, missing]
+    table = (; x, y)
+    sdata = georef(table, rand(Point, 8))
+
+    ndata = @transform(sdata, :z = :x * :y, :w = :x / :y)
+    @test isequal(ndata.z, sdata.x .* sdata.y)
+    @test isequal(ndata.w, sdata.x ./ sdata.y)
+
+    # Partition
+    x = [1, 1, 1, 1, 2, 2, 2, 2]
+    y = [1, 1, 2, 2, 3, 3, 4, 4]
+    z = [1, 2, 3, 4, 5, 6, 7, 8]
+    table = (; x, y, z)
+    sdata = georef(table, rand(Point, 8))
+
+    p = @groupby(sdata, :x, :y)
+    np = @transform(p, :z = 2 * :x + :y)
+    @test np.object.z == 2 .* sdata.x .+ sdata.y
+    @test indices(np) == indices(p)
+    @test metadata(np) == metadata(p)
+
+    # expression as first argument
+    table = (x=rand(25), y=rand(25))
+    sdata = georef(table, CartesianGrid(5, 5))
+    opr(sdata) = georef(values(sdata), GeometrySet(centroid.(domain(sdata))))
+
+    ndata = @transform(sdata |> opr, :z = :x - 2 * :y)
+    @test ndata.z == sdata.x .- 2 .* sdata.y
+    @test ndata.geometry == GeometrySet(centroid.(domain(sdata)))
+
+    @test_throws ArgumentError @transform(p, :x = 3 * :x)
+    @test_throws ArgumentError @transform(p, :y = 3 * :y)
+  end
+
+  @testset "@combine" begin
+    x = [1, 1, 1, 1, 2, 2, 2, 2]
+    y = [1, 1, 2, 2, 3, 3, 4, 4]
+    z = [1, 2, 3, 4, 5, 6, 7, 8]
+    table = (; x, y, z)
+    grid = CartesianGrid(2, 4)
+    sdata = georef(table, grid)
+
+    c = @combine(sdata, :x_sum = sum(:x))
+    @test c.x_sum == [sum(sdata.x)]
+    @test domain(c) == GeometrySet([Multi(domain(sdata))])
+    @test Tables.schema(values(c)).names == (:x_sum,)
+
+    c = @combine(sdata, :y_mean = mean(:y), :z_median = median(:z))
+    @test c.y_mean == [mean(sdata.y)]
+    @test c.z_median == [median(sdata.z)]
+    @test domain(c) == GeometrySet([Multi(domain(sdata))])
+    @test Tables.schema(values(c)).names == (:y_mean, :z_median)
+
+    # combine geometry column
+    c = @combine(sdata, :geometry = centroid(:geometry))
+    @test isnothing(values(c))
+    @test domain(c) == GeometrySet([centroid(domain(sdata))])
+    c = @combine(sdata, :y_mean = mean(:y), :geometry = centroid(:geometry))
+    @test c.y_mean == [mean(sdata.y)]
+    @test domain(c) == GeometrySet([centroid(domain(sdata))])
+
+    # column name interpolation
+    c = @combine(sdata, {"z"} = sum({"x"}) + prod({"y"}))
+    @test c.z == [sum(sdata.x) + prod(sdata.y)]
+
+    xnm, ynm, znm = :x, :y, :z
+    c = @combine(sdata, {znm} = sum({xnm}) + prod({ynm}))
+    @test c.z == [sum(sdata.x) + prod(sdata.y)]
+
+    # Partition
+    p = @groupby(sdata, :x)
+    c = @combine(p, :y_sum = sum(:y), :z_prod = prod(:z))
+    @test c.x == [first(data.x) for data in p]
+    @test c.y_sum == [sum(data.y) for data in p]
+    @test c.z_prod == [prod(data.z) for data in p]
+    @test domain(c) == GeometrySet([Multi(domain(data)) for data in p])
+    @test Tables.schema(values(c)).names == (:x, :y_sum, :z_prod)
+
+    p = @groupby(sdata, :x, :y)
+    c = @combine(p, :z_mean = mean(:z))
+    @test c.x == [first(data.x) for data in p]
+    @test c.y == [first(data.y) for data in p]
+    @test c.z_mean == [mean(data.z) for data in p]
+    @test domain(c) == GeometrySet([Multi(domain(data)) for data in p])
+    @test Tables.schema(values(c)).names == (:x, :y, :z_mean)
+
+    # combine geometry column
+    p = @groupby(sdata, :x, :y)
+    c = @combine(p, :geometry = centroid(:geometry))
+    @test c.x == [first(data.x) for data in p]
+    @test c.y == [first(data.y) for data in p]
+    @test domain(c) == GeometrySet([centroid(domain(data)) for data in p])
+    c = @combine(p, :z_mean = mean(:z), :geometry = centroid(:geometry))
+    @test c.x == [first(data.x) for data in p]
+    @test c.y == [first(data.y) for data in p]
+    @test c.z_mean == [mean(data.z) for data in p]
+    @test domain(c) == GeometrySet([centroid(domain(data)) for data in p])
+
+    # expression as first argument
+    opr(sdata) = georef(values(sdata), GeometrySet(centroid.(domain(sdata))))
+
+    c = @combine(sdata |> opr, :x_sum = sum(:x))
+    @test c.x_sum == [sum(sdata.x)]
+    @test domain(c) == GeometrySet([Multi(centroid.(domain(sdata)))])
+    @test Tables.schema(values(c)).names == (:x_sum,)
+
+    # https://github.com/JuliaEarth/GeoStats.jl/issues/542
+    sdata = georef((; c=rand(1:2, 10, 10)))
+    p = @groupby(sdata, :c)
+    c = @combine(p, :s = sum(:c))
+    c = @combine(p, :s = sum(:c))
+    @test all(≤(200), c.s)
+  end
+
+  @testset "overlay" begin
+    # basic intersection
+    poly1 = Box((0, 0), (2, 2))
+    poly2 = Box((1, 1), (3, 3))
+    poly3 = Box((4, 4), (5, 5))
+
+    gtb1 = georef((; a=[1, 2]), GeometrySet([poly1, poly3]))
+    gtb2 = georef((; b=[10]), GeometrySet([poly2]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    expected = poly1 ∩ poly2
+
+    @test propertynames(ogtb) == [:a, :b, :geometry]
+    @test nrow(ogtb) == 1
+    @test ogtb.a == [1]
+    @test ogtb.b == [10]
+    @test ogtb.geometry == GeometrySet([expected])
+
+    # explicit method
+    ogtb = overlay(gtb1, gtb2, method=:intersection)
+
+    @test propertynames(ogtb) == [:a, :b, :geometry]
+    @test nrow(ogtb) == 1
+    @test ogtb.a == [1]
+    @test ogtb.b == [10]
+    @test ogtb.geometry == GeometrySet([expected])
+
+    # multiple matches for one left geometry
+    poly4 = Box((1.5, 1.5), (2.5, 2.5))
+
+    gtb1 = georef((; a=[1]), GeometrySet([poly1]))
+    gtb2 = georef((; b=[10, 20]), GeometrySet([poly2, poly4]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test propertynames(ogtb) == [:a, :b, :geometry]
+    @test nrow(ogtb) == 2
+    @test ogtb.a == [1, 1]
+    @test ogtb.b == [10, 20]
+    @test ogtb.geometry == GeometrySet([poly1 ∩ poly2, poly1 ∩ poly4])
+
+    # multiple matches involving both geotables
+    left1 = Box((0, 0), (2, 2))
+    left2 = Box((2, 0), (4, 2))
+
+    right1 = Box((1, 1), (3, 3))
+    right2 = Box((3, 1), (5, 3))
+
+    gtb1 = georef((; a=[1, 2]), GeometrySet([left1, left2]))
+    gtb2 = georef((; b=[10, 20]), GeometrySet([right1, right2]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test propertynames(ogtb) == [:a, :b, :geometry]
+    @test nrow(ogtb) == 3
+    @test ogtb.a == [1, 2, 2]
+    @test ogtb.b == [10, 10, 20]
+    @test ogtb.geometry == GeometrySet([left1 ∩ right1, left2 ∩ right1, left2 ∩ right2])
+
+    # nonintersecting geometries are omitted
+    gtb1 = georef((; a=[1, 2]), GeometrySet([Box((0, 0), (2, 2)), Box((10, 10), (11, 11))]))
+
+    gtb2 = georef((; b=[10]), GeometrySet([Box((1, 1), (3, 3))]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test nrow(ogtb) == 1
+    @test ogtb.a == [1]
+    @test ogtb.b == [10]
+    @test ogtb.geometry == GeometrySet([Box((0, 0), (2, 2)) ∩ Box((1, 1), (3, 3))])
+
+    # empty overlay
+    gtb1 = georef((; a=[1]), GeometrySet([Box((0, 0), (1, 1))]))
+
+    gtb2 = georef((; b=[2]), GeometrySet([Box((2, 2), (3, 3))]))
+
+    @test_throws ErrorException overlay(gtb1, gtb2)
+
+    # repeated variable names
+    gtb1 = georef((; a=[1], value=[10]), GeometrySet([poly1]))
+
+    gtb2 = georef((; a=[2], value=[20]), GeometrySet([poly2]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test propertynames(ogtb) == [:a, :value, :a_, :value_, :geometry]
+    @test ogtb.a == [1]
+    @test ogtb.value == [10]
+    @test ogtb.a_ == [2]
+    @test ogtb.value_ == [20]
+    @test ogtb.geometry == GeometrySet([poly1 ∩ poly2])
+
+    # one repeated variable name
+    gtb1 = georef((; id=[1], leftvalue=[10]), GeometrySet([poly1]))
+
+    gtb2 = georef((; id=[2], rightvalue=[20]), GeometrySet([poly2]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test propertynames(ogtb) == [:id, :leftvalue, :id_, :rightvalue, :geometry]
+    @test ogtb.id == [1]
+    @test ogtb.leftvalue == [10]
+    @test ogtb.id_ == [2]
+    @test ogtb.rightvalue == [20]
+
+    # units
+    gtb1 = georef((; temperature=[10.0] * u"K"), GeometrySet([poly1]))
+
+    gtb2 = georef((; distance=[2.0] * u"m"), GeometrySet([poly2]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test propertynames(ogtb) == [:temperature, :distance, :geometry]
+    @test unit(eltype(ogtb.temperature)) == u"K"
+    @test unit(eltype(ogtb.distance)) == u"m"
+    @test ogtb.temperature == gtb1.temperature
+    @test ogtb.distance == gtb2.distance
+
+    # affine units
+    gtb1 = georef((; temperature=[20.0] * u"°C"), GeometrySet([poly1]))
+
+    gtb2 = georef((; value=[1]), GeometrySet([poly2]))
+
+    ngtb1 = GeoTables._adjustunits(gtb1)
+    ogtb = overlay(gtb1, gtb2)
+
+    @test propertynames(ogtb) == [:temperature, :value, :geometry]
+    @test unit(eltype(ogtb.temperature)) == u"K"
+    @test ogtb.temperature == ngtb1.temperature
+    @test ogtb.value == [1]
+
+    # missing values
+    gtb1 = georef((; a=Union{Missing,Int}[missing]), GeometrySet([poly1]))
+
+    gtb2 = georef((; b=Union{Missing,Float64}[missing]), GeometrySet([poly2]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test nrow(ogtb) == 1
+    @test isequal(ogtb.a, [missing])
+    @test isequal(ogtb.b, [missing])
+    @test ogtb.geometry == GeometrySet([poly1 ∩ poly2])
+
+    # missing and nonmissing values
+    gtb1 = georef((; a=Union{Missing,Int}[1, missing]), GeometrySet([Box((0, 0), (2, 2)), Box((2, 0), (4, 2))]))
+
+    gtb2 = georef((; b=[10]), GeometrySet([Box((1, 1), (3, 3))]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test nrow(ogtb) == 2
+    @test isequal(ogtb.a, [1, missing])
+    @test ogtb.b == [10, 10]
+
+    # different CRS
+    gtb1 = georef((; a=[1]), GeometrySet([poly1])) |> Proj(Mercator{WGS84Latest})
+
+    gtb2 = georef((; b=[2]), GeometrySet([poly2]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test propertynames(ogtb) == [:a, :b, :geometry]
+    @test nrow(ogtb) == 1
+    @test crs(ogtb.geometry) <: Mercator{WGS84Latest}
+    @test ogtb.a == [1]
+    @test ogtb.b == [2]
+
+    # touching intersection
+    box1 = Box((0, 0), (1, 1))
+    box2 = Box((1, 0), (2, 1))
+
+    gtb1 = georef((; a=[1]), GeometrySet([box1]))
+    gtb2 = georef((; b=[2]), GeometrySet([box2]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test nrow(ogtb) == 1
+    @test ogtb.a == [1]
+    @test ogtb.b == [2]
+    @test ogtb.geometry == GeometrySet([box1 ∩ box2])
+
+    # point-polygon intersection
+    poly = Box((0, 0), (2, 2))
+    points = PointSet((1, 1), (3, 3))
+
+    gtb1 = georef((; a=[1]), GeometrySet([poly]))
+    gtb2 = georef((; b=[10, 20]), points)
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test propertynames(ogtb) == [:a, :b, :geometry]
+    @test nrow(ogtb) == 1
+    @test ogtb.a == [1]
+    @test ogtb.b == [10]
+    @test ogtb.geometry == GeometrySet([Point(1, 1)])
+
+    # reversed point-polygon order
+    gtb1 = georef((; a=[10, 20]), points)
+    gtb2 = georef((; b=[1]), GeometrySet([poly]))
+
+    ogtb = overlay(gtb1, gtb2)
+
+    @test propertynames(ogtb) == [:a, :b, :geometry]
+    @test nrow(ogtb) == 1
+    @test ogtb.a == [10]
+    @test ogtb.b == [1]
+    @test ogtb.geometry == GeometrySet([Point(1, 1)])
+
+    # invalid method
+    @test_throws ArgumentError overlay(gtb1, gtb2, method=:union)
+
+    @test_throws ArgumentError overlay(gtb1, gtb2, method=:difference)
+
+    @test_throws ArgumentError overlay(gtb1, gtb2, method=:test)
+  end
 end
