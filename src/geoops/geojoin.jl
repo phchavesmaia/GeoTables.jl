@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------
 
 """
-    geojoin(geotable₁, geotable₂, var₁ => agg₁, ..., varₙ => aggₙ; kind=:left, pred=intersects, on=nothing, spindex=BVH)
+    geojoin(geotable₁, geotable₂, var₁ => agg₁, ..., varₙ => aggₙ; kind=:left, pred=intersects, on=nothing, searchmethod=BoundingBoxSearch)
 
 Joins `geotable₁` with `geotable₂` using a certain `kind` of join and predicate function `pred`
 that takes two geometries and returns a boolean (`(g1, g2) -> g1 ⊆ g2`).
@@ -16,8 +16,8 @@ Whenever two or more matches are encountered, aggregate `varᵢ` with aggregatio
 If no aggregation function is provided for a variable, then the aggregation function will be
 selected according to the scientific types: `mean` for continuous and `first` otherwise.
 
-The spindex keyword specifies the spatial index used for broad-phase pruning when supported by 
-the predicate. It defaults to BVH.
+The `searchmethod` keyword specifies the neighor search method used for broad-phase pruning, when 
+supported by the predicate. It defaults to BoundingBoxSearch (Bounding Volume Hierarchy).
 
 ## Kinds
 
@@ -51,7 +51,7 @@ function _geojoin(
   kind=:left,
   pred=intersects,
   on=nothing,
-  spindex=BVH
+  searchmethod=BoundingBoxSearch
 )
   if kind ∉ (:left, :inner)
     throw(ArgumentError("invalid kind of join, use one of :left or :inner"))
@@ -77,7 +77,7 @@ function _geojoin(
   gtb1 = _adjustunits(gtb1)
   gtb2 = _adjustunits(gtb2)
 
-  _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred, spindex)
+  _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred, searchmethod)
 end
 
 function _uniquenames(gtb1, gtb2, onvars=nothing)
@@ -101,7 +101,7 @@ function _uniquenames(gtb1, gtb2, onvars=nothing)
   gtb1, gtb2
 end
 
-function _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred, spindex)
+function _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred, searchmethod)
   dom1 = domain(gtb1)
   dom2 = domain(gtb2)
   tab1 = values(gtb1)
@@ -118,26 +118,26 @@ function _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred, s
   agg = _aggdict(selector, aggfuns, cols2, vars2)
 
   # flag predicates for which overlapping bounding boxes are necessary
-  usespindex = pred ∈ (intersects, issubset, isequal)
-  if usespindex
-    index2 = spindex(dom2)
+  usesearchmethod = pred ∈ (intersects, issubset, isequal)
+  if usesearchmethod
+    index2 = searchmethod(dom2)
   end
 
   # rows to join
   jrows = _tmap(1:nrow(gtb1)) do i
     geo1 = dom1[i]
     row1 = Tables.subset(tab1, i, viewhint=true)
-    if usespindex
-    matchinds = Int[]
-    foreachcandidate(geo1, index2) do j
-      row2 = Tables.subset(tab2, j, viewhint=true)
-      onpred(row1, row2) || return
-      geo2 = dom2[j]
-      pred(geo1, geo2) || return
-      push!(matchinds, j)
-    end
-    sort!(matchinds)
-    [Tables.subset(tab2, j, viewhint=true) for j in matchinds]
+    if usesearchmethod
+      matchinds = Int[]
+      Meshes._foreachcandidate(geo1, index2) do j
+        row2 = Tables.subset(tab2, j, viewhint=true)
+        onpred(row1, row2) || return
+        geo2 = dom2[j]
+        pred(geo1, geo2) || return
+        push!(matchinds, j)
+      end
+      sort!(matchinds)
+      [Tables.subset(tab2, j, viewhint=true) for j in matchinds]
     else
       rows2 = Tables.rows(tab2)
       [row2 for (geo2, row2) in zip(dom2, rows2) if pred(geo1, geo2) && onpred(row1, row2)]
