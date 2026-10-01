@@ -631,10 +631,8 @@
     poly1 = Box((0, 0), (2, 2))
     poly2 = Box((1, 1), (3, 3))
     poly3 = Box((4, 4), (5, 5))
-
     gtb1 = georef((; a=[1, 2]), GeometrySet([poly1, poly3]))
     gtb2 = georef((; b=[10]), GeometrySet([poly2]))
-
     ogtb = overlay(gtb1, gtb2)
 
     expected = poly1 ∩ poly2
@@ -656,10 +654,8 @@
 
     # multiple matches for one left geometry
     poly4 = Box((1.5, 1.5), (2.5, 2.5))
-
     gtb1 = georef((; a=[1]), GeometrySet([poly1]))
     gtb2 = georef((; b=[10, 20]), GeometrySet([poly2, poly4]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test propertynames(ogtb) == [:a, :b, :geometry]
@@ -671,13 +667,10 @@
     # multiple matches involving both geotables
     left1 = Box((0, 0), (2, 2))
     left2 = Box((2, 0), (4, 2))
-
     right1 = Box((1, 1), (3, 3))
     right2 = Box((3, 1), (5, 3))
-
     gtb1 = georef((; a=[1, 2]), GeometrySet([left1, left2]))
     gtb2 = georef((; b=[10, 20]), GeometrySet([right1, right2]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test propertynames(ogtb) == [:a, :b, :geometry]
@@ -688,9 +681,7 @@
 
     # nonintersecting geometries are omitted
     gtb1 = georef((; a=[1, 2]), GeometrySet([Box((0, 0), (2, 2)), Box((10, 10), (11, 11))]))
-
     gtb2 = georef((; b=[10]), GeometrySet([Box((1, 1), (3, 3))]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test nrow(ogtb) == 1
@@ -700,16 +691,13 @@
 
     # empty overlay
     gtb1 = georef((; a=[1]), GeometrySet([Box((0, 0), (1, 1))]))
-
     gtb2 = georef((; b=[2]), GeometrySet([Box((2, 2), (3, 3))]))
 
     @test_throws ErrorException overlay(gtb1, gtb2)
 
     # repeated variable names
     gtb1 = georef((; a=[1], value=[10]), GeometrySet([poly1]))
-
     gtb2 = georef((; a=[2], value=[20]), GeometrySet([poly2]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test propertynames(ogtb) == [:a, :value, :a_, :value_, :geometry]
@@ -721,9 +709,7 @@
 
     # one repeated variable name
     gtb1 = georef((; id=[1], leftvalue=[10]), GeometrySet([poly1]))
-
     gtb2 = georef((; id=[2], rightvalue=[20]), GeometrySet([poly2]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test propertynames(ogtb) == [:id, :leftvalue, :id_, :rightvalue, :geometry]
@@ -734,9 +720,7 @@
 
     # units
     gtb1 = georef((; temperature=[10.0] * u"K"), GeometrySet([poly1]))
-
     gtb2 = georef((; distance=[2.0] * u"m"), GeometrySet([poly2]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test propertynames(ogtb) == [:temperature, :distance, :geometry]
@@ -747,9 +731,7 @@
 
     # affine units
     gtb1 = georef((; temperature=[20.0] * u"°C"), GeometrySet([poly1]))
-
     gtb2 = georef((; value=[1]), GeometrySet([poly2]))
-
     ngtb1 = GeoTables._adjustunits(gtb1)
     ogtb = overlay(gtb1, gtb2)
 
@@ -760,9 +742,7 @@
 
     # missing values
     gtb1 = georef((; a=Union{Missing,Int}[missing]), GeometrySet([poly1]))
-
     gtb2 = georef((; b=Union{Missing,Float64}[missing]), GeometrySet([poly2]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test nrow(ogtb) == 1
@@ -772,9 +752,7 @@
 
     # missing and nonmissing values
     gtb1 = georef((; a=Union{Missing,Int}[1, missing]), GeometrySet([Box((0, 0), (2, 2)), Box((2, 0), (4, 2))]))
-
     gtb2 = georef((; b=[10]), GeometrySet([Box((1, 1), (3, 3))]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test nrow(ogtb) == 2
@@ -783,9 +761,7 @@
 
     # different CRS
     gtb1 = georef((; a=[1]), GeometrySet([poly1])) |> Proj(Mercator{WGS84Latest})
-
     gtb2 = georef((; b=[2]), GeometrySet([poly2]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test propertynames(ogtb) == [:a, :b, :geometry]
@@ -797,10 +773,8 @@
     # touching intersection
     box1 = Box((0, 0), (1, 1))
     box2 = Box((1, 0), (2, 1))
-
     gtb1 = georef((; a=[1]), GeometrySet([box1]))
     gtb2 = georef((; b=[2]), GeometrySet([box2]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test nrow(ogtb) == 1
@@ -811,10 +785,8 @@
     # point-polygon intersection
     poly = Box((0, 0), (2, 2))
     points = PointSet((1, 1), (3, 3))
-
     gtb1 = georef((; a=[1]), GeometrySet([poly]))
     gtb2 = georef((; b=[10, 20]), points)
-
     ogtb = overlay(gtb1, gtb2)
 
     @test propertynames(ogtb) == [:a, :b, :geometry]
@@ -826,7 +798,6 @@
     # reversed point-polygon order
     gtb1 = georef((; a=[10, 20]), points)
     gtb2 = georef((; b=[1]), GeometrySet([poly]))
-
     ogtb = overlay(gtb1, gtb2)
 
     @test propertynames(ogtb) == [:a, :b, :geometry]
@@ -837,9 +808,7 @@
 
     # invalid method
     @test_throws ArgumentError overlay(gtb1, gtb2, method=:union)
-
     @test_throws ArgumentError overlay(gtb1, gtb2, method=:difference)
-
     @test_throws ArgumentError overlay(gtb1, gtb2, method=:test)
   end
 end
