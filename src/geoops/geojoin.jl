@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------
 
 """
-    geojoin(geotable₁, geotable₂, var₁ => agg₁, ..., varₙ => aggₙ; kind=:left, pred=intersects, on=nothing, searchmethod=BoundingBoxSearch)
+    geojoin(geotable₁, geotable₂, var₁ => agg₁, ..., varₙ => aggₙ; kind=:left, pred=intersects, on=nothing, searchmethod=BBoxSearch)
 
 Joins `geotable₁` with `geotable₂` using a certain `kind` of join and predicate function `pred`
 that takes two geometries and returns a boolean (`(g1, g2) -> g1 ⊆ g2`).
@@ -17,7 +17,7 @@ If no aggregation function is provided for a variable, then the aggregation func
 selected according to the scientific types: `mean` for continuous and `first` otherwise.
 
 The `searchmethod` keyword specifies the neighor search method used for broad-phase pruning, when 
-supported by the predicate. It defaults to BoundingBoxSearch (Bounding Volume Hierarchy).
+supported by the predicate. It defaults to BBoxSearch (Bounding Volume Hierarchy).
 
 ## Kinds
 
@@ -51,7 +51,7 @@ function _geojoin(
   kind=:left,
   pred=intersects,
   on=nothing,
-  searchmethod=BoundingBoxSearch
+  searchmethod=BBoxSearch
 )
   if kind ∉ (:left, :inner)
     throw(ArgumentError("invalid kind of join, use one of :left or :inner"))

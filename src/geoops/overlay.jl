@@ -1,7 +1,7 @@
 """
 	overlay(geotable₁, geotable₂;
 						method=:intersection,
-						searchmethod=BoundingBoxSearch)
+						searchmethod=BBoxSearch)
 
 Computes a spatial overlay between two geotables.
 
@@ -13,7 +13,7 @@ geometries from which it originated.
 
 * `:intersection` - portions shared by both geotables
 """
-function overlay(gtb1::AbstractGeoTable, gtb2::AbstractGeoTable; method=:intersection, searchmethod=BoundingBoxSearch)
+function overlay(gtb1::AbstractGeoTable, gtb2::AbstractGeoTable; method=:intersection, searchmethod=BBoxSearch)
   if method ∉ (:intersection,)
     throw(ArgumentError("invalid overlay method, only :intersection is implemented at the moment."))
   end
