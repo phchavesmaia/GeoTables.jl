@@ -141,7 +141,7 @@ function _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred, s
     else
       [
         j for (j, geo2) in enumerate(dom2) if
-        (isnothing(row1) || onpred(row1, Tables.subset(tab2, j, viewhint=true)) && pred(geo1, geo2))
+        (isnothing(row1) || onpred(row1, Tables.subset(tab2, j, viewhint=true))) && pred(geo1, geo2)
       ]
     end
   end
