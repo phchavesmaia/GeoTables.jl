@@ -62,11 +62,11 @@ end
 function _overlayintersection(dom1, dom2, searchmethod)
   index2 = searchmethod(dom2)
   # iterate over geometries in gtb1 and find matches in gtb2
-  rowgroups = _tmap(eachindex(dom1)) do i
+  rowgroups = _tmap(eachindex(dom1), () -> Int[]) do i, stack
     geo1 = dom1[i]
     rows = Tuple{Int,Int,Geometry}[]
     # iterate over candidates in gtb2 that have overlapping bounding boxes with the geometry in gtb1
-    Meshes._foreachcandidate(geo1, index2) do j
+    Meshes._foreachcandidate(geo1, index2, stack) do j
       geo2 = dom2[j]
       # flatten Multi geometries on both sides
       for g1 in _components(geo1)

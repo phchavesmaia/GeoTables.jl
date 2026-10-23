@@ -124,12 +124,12 @@ function _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred, s
   end
 
   # rows indices to join
-  matchgroups = _tmap(1:nrow(gtb1)) do i
+  matchgroups = _tmap(1:nrow(gtb1), () -> Int[]) do i, stack
     geo1 = dom1[i]
     row1 = isnothing(onvars) ? nothing : Tables.subset(tab1, i, viewhint=true)
     if usesearchmethod
       matchinds = Int[]
-      Meshes._foreachcandidate(geo1, neighbors) do j
+      Meshes._foreachcandidate(geo1, neighbors, stack) do j
         if !isnothing(row1)
           row2 = Tables.subset(tab2, j, viewhint=true)
           onpred(row1, row2) || return
@@ -249,10 +249,11 @@ function _aggdict(selector, aggfuns, cols, vars)
   agg
 end
 
-function _tmap(f, itr)
+function _tmap(f, itr, init)
   chunks = Iterators.partition(itr, cld(length(itr), Threads.nthreads()))
   tasks = map(chunks) do chunk
-    Threads.@spawn map(f, chunk)
+    scratch = init()
+    Threads.@spawn map(i -> f(i, scratch), chunk)
   end
   mapreduce(fetch, vcat, tasks)
 end
