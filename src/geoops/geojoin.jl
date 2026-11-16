@@ -120,16 +120,18 @@ function _geojoinof(kind, gtb1, gtb2, selector, aggfuns, pred, onvars, onpred, s
   # flag predicates for which overlapping bounding boxes are necessary
   usesearchmethod = pred ∈ (intersects, issubset, isequal)
   if usesearchmethod
-    neighbors = searchmethod(dom2)
+    tree = searchmethod(dom2).tree
+    boxes = boundingbox.(dom1)
   end
 
   # rows indices to join
-  matchgroups = _tmap(1:nrow(gtb1), () -> Int[]) do i, stack
+  matchgroups = _tmap(1:nrow(gtb1)) do i
     geo1 = dom1[i]
     row1 = isnothing(onvars) ? nothing : Tables.subset(tab1, i, viewhint=true)
     if usesearchmethod
       matchinds = Int[]
-      Meshes._foreachcandidate(geo1, neighbors, stack) do j
+      box1 = boxes[i]
+      Meshes.foreachcandidate(box1, tree) do j
         if !isnothing(row1)
           row2 = Tables.subset(tab2, j, viewhint=true)
           onpred(row1, row2) || return
@@ -249,11 +251,10 @@ function _aggdict(selector, aggfuns, cols, vars)
   agg
 end
 
-function _tmap(f, itr, init)
+function _tmap(f, itr)
   chunks = Iterators.partition(itr, cld(length(itr), Threads.nthreads()))
   tasks = map(chunks) do chunk
-    scratch = init()
-    Threads.@spawn map(i -> f(i, scratch), chunk)
+    Threads.@spawn map(f, chunk)
   end
   mapreduce(fetch, vcat, tasks)
 end
